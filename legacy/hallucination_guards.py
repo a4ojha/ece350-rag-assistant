@@ -112,7 +112,7 @@ If NO, it means important information is missing or the topic isn't covered."""
 
 
 # Integration example: Enhanced RAG assistant
-class EnhancedECE350RAGAssistant:
+class ECE350RAGAssistant:
     """
     Extended RAG assistant with hallucination safeguards.
     """
@@ -214,7 +214,7 @@ if __name__ == "__main__":
     base.build_faiss_index()
     
     # Wrap with safeguards
-    enhanced = EnhancedECE350RAGAssistant(base)
+    enhanced = ECE350RAGAssistant(base)
     
     # Test queries
     test_queries = [

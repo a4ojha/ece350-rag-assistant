@@ -1,20 +1,26 @@
+"""
+RAG pipeline that returns structured, frontend-ready responses.
+"""
+
 import json
+from dotenv import load_dotenv
 import numpy as np
 import faiss
-from typing import List, Dict, Tuple
+from typing import List, Dict, Optional, Tuple
 from openai import OpenAI
 import os
-from dotenv import load_dotenv
+import time
+from data_models import Chunk, RetrievalResult
 
-class ECE350RAGAssistant:
+class ECE350RAG:
     """
-    RAG assistant for ECE 350
-    ensures answers are strictly based on lecture content (https://github.com/jzarnett/ece350/tree/main/lectures)
+    RAG system with full traceability and structured responses.
+    Ready for future API integration.
     """
     
     def __init__(
-        self, 
-        chunks_file: str = "lecture_chunks.json",
+        self,
+        chunks_file: str = "chunks.json",
         embedding_model: str = "text-embedding-3-small",
         llm_model: str = "gpt-4o-mini"
     ):
@@ -24,19 +30,49 @@ class ECE350RAGAssistant:
         self.llm_model = llm_model
         
         # Load chunks
+        print(f"Loading chunks from {chunks_file}...")
         with open(chunks_file, 'r') as f:
-            self.chunks = json.load(f)
+            chunk_dicts = json.load(f)
+        
+        # Reconstruct Chunk objects
+        self.chunks = self._reconstruct_chunks(chunk_dicts)
+        print(f"✓ Loaded {len(self.chunks)} chunks")
         
         self.index = None
         self.embeddings = None
+    
+    def _reconstruct_chunks(self, chunk_dicts: List[Dict]) -> List[Chunk]:
+        """Reconstruct Chunk objects from JSON."""
+        from data_models import SourceLocation, HierarchyPath, ContentFeatures
         
+        chunks = []
+        for d in chunk_dicts:
+            source = SourceLocation(**d['source'])
+            hierarchy = HierarchyPath(**{k: v for k, v in d['hierarchy'].items() 
+                                        if k not in ['breadcrumb', 'short_breadcrumb']})
+            features = ContentFeatures(**d['features'])
+            
+            chunk = Chunk(
+                chunk_id=d['chunk_id'],
+                source=source,
+                hierarchy=hierarchy,
+                chunk_position_in_section=d['chunk_position_in_section'],
+                total_chunks_in_section=d['total_chunks_in_section'],
+                chunk_position_in_lecture=d['chunk_position_in_lecture'],
+                text=d['text'],
+                text_length=d['text_length'],
+                word_count=d['word_count'],
+                features=features
+            )
+            chunks.append(chunk)
+        
+        return chunks
+    
     def create_embeddings(self, save_path: str = "embeddings.npy"):
         """Generate embeddings for all chunks."""
         print("Generating embeddings...")
         
-        texts = [chunk['text'] for chunk in self.chunks]
-        
-        # Batch embed (OpenAI allows up to 2048 texts per request)
+        texts = [chunk.text for chunk in self.chunks]
         all_embeddings = []
         batch_size = 100
         
@@ -51,46 +87,48 @@ class ECE350RAGAssistant:
             print(f"  Processed {min(i + batch_size, len(texts))}/{len(texts)}")
         
         self.embeddings = np.array(all_embeddings, dtype='float32')
+        
+        # Store embeddings in chunks (for potential export)
+        for chunk, embedding in zip(self.chunks, all_embeddings):
+            chunk.embedding = embedding
+        
         np.save(save_path, self.embeddings)
-        print(f"Saved embeddings to {save_path}")
+        print(f"✓ Saved embeddings to {save_path}")
         
         return self.embeddings
     
     def load_embeddings(self, load_path: str = "embeddings.npy"):
-        """Load pre-computed embeddings"""
+        """Load pre-computed embeddings."""
         self.embeddings = np.load(load_path)
-        print(f"Loaded {len(self.embeddings)} embeddings")
+        print(f"✓ Loaded {len(self.embeddings)} embeddings")
     
     def build_faiss_index(self):
-        """Build FAISS index for fast similarity search."""
+        """Build FAISS index."""
         if self.embeddings is None:
-            raise ValueError("Embeddings not loaded. Call create_embeddings() or load_embeddings() first.")
+            raise ValueError("Embeddings not loaded")
         
-        dimension = self.embeddings.shape[1]        
+        dimension = self.embeddings.shape[1]
         faiss.normalize_L2(self.embeddings)
         
         self.index = faiss.IndexFlatIP(dimension)
         self.index.add(self.embeddings)
         
-        print(f"Built FAISS index with {self.index.ntotal} vectors")
+        print(f"✓ Built FAISS index with {self.index.ntotal} vectors")
     
-    def retrieve_context(
-        self, 
-        query: str, 
+    def retrieve_chunks(
+        self,
+        query: str,
         top_k: int = 5,
         min_score: float = 0.3
-    ) -> List[Dict]:
+    ) -> Tuple[List[Chunk], Dict]:
         """
-        Retrieve most relevant chunks for a query.
-        
-        Args:
-            query: User question
-            top_k: Number of chunks to retrieve
-            min_score: Minimum similarity score (0-1)
+        Retrieve relevant chunks with statistics.
         
         Returns:
-            List of relevant chunks with scores
+            (chunks, stats_dict)
         """
+        start_time = time.time()
+        
         # Embed query
         response = self.client.embeddings.create(
             model=self.embedding_model,
@@ -102,57 +140,71 @@ class ECE350RAGAssistant:
         # Search
         scores, indices = self.index.search(query_embedding, top_k)
         
-        # Filter by minimum score and format results
-        results = []
+        # Filter and annotate chunks
+        retrieved = []
         for score, idx in zip(scores[0], indices[0]):
             if score >= min_score:
-                chunk = self.chunks[idx].copy()
-                chunk['relevance_score'] = float(score)
-                results.append(chunk)
+                chunk = self.chunks[idx]
+                chunk.relevance_score = float(score)
+                retrieved.append(chunk)
         
-        return results
+        retrieval_time = int((time.time() - start_time) * 1000)
+        
+        stats = {
+            "total_candidates": self.index.ntotal,
+            "retrieved": len(retrieved),
+            "avg_score": float(np.mean([c.relevance_score for c in retrieved])) if retrieved else 0.0,
+            "retrieval_time_ms": retrieval_time
+        }
+        
+        return retrieved, stats
     
-    def format_context(self, chunks: List[Dict]) -> str:
-        """Format retrieved chunks into context string."""
+    def format_context_for_llm(self, chunks: List[Chunk]) -> str:
+        """Format chunks into LLM context."""
         if not chunks:
             return "No relevant lecture content found."
         
         context_parts = []
         for i, chunk in enumerate(chunks, 1):
-            header = f"[Lecture {chunk['lecture_num']}: {chunk['lecture_title']}]"
-            section = f"Section: {chunk['section']}"
-            if chunk['subsection']:
-                section += f" > {chunk['subsection']}"
+            header = f"[Lecture {chunk.hierarchy.lecture_num}: {chunk.hierarchy.lecture_title}]"
+            location = f"Section: {chunk.hierarchy.section_title}"
+            if chunk.hierarchy.subsection_title:
+                location += f" > {chunk.hierarchy.subsection_title}"
             
             context_parts.append(
-                f"--- Context {i} (relevance: {chunk['relevance_score']:.2f}) ---\n"
-                f"{header}\n{section}\n\n{chunk['text']}\n"
+                f"--- Source {i} (relevance: {chunk.relevance_score:.3f}) ---\n"
+                f"{header}\n"
+                f"{location}\n"
+                f"Location: {chunk.source.tex_file} (lines {chunk.source.line_start}-{chunk.source.line_end})\n\n"
+                f"{chunk.text}\n"
             )
         
         return "\n".join(context_parts)
     
-    def generate_grounded_response(
-        self, 
-        query: str, 
+    def generate_answer(
+        self,
+        query: str,
         context: str,
         temperature: float = 0.0
-    ) -> Dict[str, str]:
+    ) -> Tuple[str, str, int]:
         """
-        Generate response using LLM with strict grounding constraints.
+        Generate grounded answer.
         
         Returns:
-            Dict with 'answer', 'confidence', and 'sources'
+            (answer, confidence, generation_time_ms)
         """
-        system_prompt = """You are a knowledgeable teaching assistant for ECE 350 (Operating Systems) at the University of Waterloo.
+        start_time = time.time()
+        
+        system_prompt = """You are a knowledgeable teaching assistant for ECE 350 (Operating Systems).
 
-Your CRITICAL CONSTRAINTS:
-1. Answer ONLY based on the provided lecture context
-2. If the context doesn't contain the answer, you MUST say: "This topic is not covered in the available lecture notes."
+CRITICAL CONSTRAINTS:
+1. Answer ONLY using information from the provided lecture context
+2. If the context doesn't contain enough information, explicitly state: "This topic is not sufficiently covered in the available lecture notes."
 3. NEVER use outside knowledge or make assumptions
-4. Quote specific lectures when possible (e.g., "According to Lecture 2, section 'Past is Prologue', subsection 'The Process and the Thread'...")
-5. If context is partial, acknowledge limitations explicitly
+4. When referencing information, cite the specific lecture and section (e.g., "According to Lecture 5, Section on Context Switching...")
+5. If the context is partial or ambiguous, acknowledge this explicitly
 
-Your goal is to help students learn accurately from their course material."""
+Your goal is accuracy over completeness. It's better to say "I don't know" than to provide ungrounded information."""
 
         user_prompt = f"""Question: {query}
 
@@ -160,10 +212,10 @@ Lecture Context:
 {context}
 
 Instructions:
-- Answer the question using ONLY the context above
-- If you cannot answer from the context, say so clearly
-- Cite which lecture(s) you're referencing
-- Be concise but complete"""
+- Answer using ONLY the context above
+- Cite specific lectures and sections
+- If information is insufficient, say so clearly
+- Be precise and concise"""
 
         response = self.client.chat.completions.create(
             model=self.llm_model,
@@ -175,92 +227,152 @@ Instructions:
         )
         
         answer = response.choices[0].message.content
+        generation_time = int((time.time() - start_time) * 1000)
         
-        # Simple confidence heuristic
-        confidence = "high" if "not covered" not in answer.lower() else "low"
+        # Determine confidence
+        not_covered_phrases = [
+            "not covered", "not sufficiently covered", "not mentioned",
+            "don't have enough information", "insufficient information"
+        ]
+        confidence = "low" if any(phrase in answer.lower() for phrase in not_covered_phrases) else "high"
         
-        return {
-            "answer": answer,
-            "confidence": confidence,
-            "model_used": self.llm_model
-        }
+        return answer, confidence, generation_time
     
     def ask(
-        self, 
-        query: str, 
+        self,
+        query: str,
         top_k: int = 5,
         verbose: bool = False
-    ) -> Dict:
+    ) -> RetrievalResult:
         """
-        Main query interface.
+        Main query interface - returns structured result ready for frontend.
         
         Args:
-            query: Student question
-            top_k: Number of context chunks to retrieve
-            verbose: Print retrieval details
+            query: User question
+            top_k: Number of chunks to retrieve
+            verbose: Print detailed info to console
         
         Returns:
-            Dict with answer, sources, and metadata
+            RetrievalResult with complete metadata
         """
-        # Retrieve relevant chunks
-        retrieved_chunks = self.retrieve_context(query, top_k=top_k)
+        # Retrieve
+        chunks, retrieval_stats = self.retrieve_chunks(query, top_k=top_k)
         
-        if verbose:
-            print(f"\nRetrieved {len(retrieved_chunks)} relevant chunks:")
-            for chunk in retrieved_chunks:
-                print(f"  - Lecture {chunk['lecture_num']}: {chunk['section']} (score: {chunk['relevance_score']:.3f})")
+        if not chunks:
+            return RetrievalResult(
+                query=query,
+                answer="No relevant content found in the lecture notes for this question.",
+                confidence="no_context",
+                sources=[],
+                retrieval_stats=retrieval_stats,
+                model_used=self.llm_model
+            )
         
         # Format context
-        context = self.format_context(retrieved_chunks)
+        context = self.format_context_for_llm(chunks)
         
-        # Generate response
-        response = self.generate_grounded_response(query, context)
+        # Generate answer
+        answer, confidence, gen_time = self.generate_answer(query, context)
         
-        # Add sources
-        sources = [
-            {
-                "lecture_num": c['lecture_num'],
-                "lecture_title": c['lecture_title'],
-                "section": c['section'],
-                "score": c['relevance_score']
-            }
-            for c in retrieved_chunks
-        ]
+        # Create result
+        result = RetrievalResult(
+            query=query,
+            answer=answer,
+            confidence=confidence,
+            sources=chunks,
+            retrieval_stats=retrieval_stats,
+            model_used=self.llm_model,
+            generation_time_ms=gen_time
+        )
         
-        return {
-            "question": query,
-            "answer": response["answer"],
-            "confidence": response["confidence"],
-            "sources": sources,
-            "num_chunks_retrieved": len(retrieved_chunks)
-        }
+        if verbose:
+            result.print_structured()
+        
+        return result
+    
+    def export_result_for_frontend(self, result: RetrievalResult) -> Dict:
+        """
+        Export result in frontend-ready format.
+        This is what your Next.js API will return.
+        """
+        return result.to_dict()
+    
+    def get_chunk_by_id(self, chunk_id: str) -> Optional[Chunk]:
+        """Retrieve specific chunk by ID (useful for "show full context" feature)."""
+        for chunk in self.chunks:
+            if chunk.chunk_id == chunk_id:
+                return chunk
+        return None
+    
+    def get_surrounding_chunks(self, chunk_id: str, context_size: int = 2) -> List[Chunk]:
+        """
+        Get surrounding chunks from same lecture (for expanded context view).
+        
+        Args:
+            chunk_id: Central chunk
+            context_size: Number of chunks before/after to include
+        
+        Returns:
+            List of chunks in order
+        """
+        central_chunk = self.get_chunk_by_id(chunk_id)
+        if not central_chunk:
+            return []
+        
+        # Find chunks from same lecture
+        lecture_num = central_chunk.hierarchy.lecture_num
+        same_lecture = [c for c in self.chunks if c.hierarchy.lecture_num == lecture_num]
+        same_lecture.sort(key=lambda c: c.chunk_position_in_lecture)
+        
+        # Find position
+        try:
+            idx = same_lecture.index(central_chunk)
+            start = max(0, idx - context_size)
+            end = min(len(same_lecture), idx + context_size + 1)
+            return same_lecture[start:end]
+        except ValueError:
+            return [central_chunk]
 
 
-# Setup and usage example
+# Example usage
 if __name__ == "__main__":
-    # Initialize assistant
-    assistant = ECE350RAGAssistant(
-        chunks_file="lecture_chunks.json",
+    # Initialize
+    rag = ECE350RAG(
+        chunks_file="chunks.json",
         embedding_model="text-embedding-3-small",
         llm_model="gpt-4o-mini"
     )
     
-    assistant.load_embeddings()
-    assistant.build_faiss_index()
+    rag.load_embeddings("embeddings.npy")
+    rag.build_faiss_index()
     
-    # Example queries
-    print("\n=== Example Queries ===\n")
+    # Test query with verbose output
+    print("\n" + "="*80)
+    print("RAG DEMO")
+    print("="*80)
     
-    questions = [
-        "What is a context switch and why is it expensive?",
+    result = rag.ask(
         "Explain the difference between threads and processes",
-        "What is quantum computing?",  # Should return "not covered"
-    ]
+        verbose=True
+    )
     
-    for question in questions:
-        print(f"Q: {question}")
-        result = assistant.ask(question, verbose=True)
-        print(f"\nA: {result['answer']}")
-        print(f"Confidence: {result['confidence']}")
-        print(f"Sources: {len(result['sources'])} lectures")
-        print("-" * 80 + "\n")
+    print("\n" + "="*80)
+    print("FRONTEND-READY JSON")
+    print("="*80)
+    
+    frontend_json = rag.export_result_for_frontend(result)
+    print(json.dumps(frontend_json, indent=2)[:1000] + "...")
+    
+    # Test surrounding context feature
+    if result.sources:
+        print("\n" + "="*80)
+        print("SURROUNDING CONTEXT DEMO")
+        print("="*80)
+        
+        first_chunk_id = result.sources[0].chunk_id
+        surrounding = rag.get_surrounding_chunks(first_chunk_id, context_size=1)
+        
+        print(f"\nShowing context around chunk: {first_chunk_id}")
+        for chunk in surrounding:
+            marker = "→" if chunk.chunk_id == first_chunk_id else " "
+            print(f"{marker} {chunk.chunk_id}: {chunk.text[:80]}...")
