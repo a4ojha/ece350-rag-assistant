@@ -1,5 +1,5 @@
 """
-Enhanced interactive demo showcasing structured retrieval and ability to trace back.
+console demo showcasing structured retrieval and ability to trace back.
 """
 
 import os
@@ -7,9 +7,7 @@ import json
 from rag_pipeline import ECE350RAG
 from data_models import RetrievalResult
 
-class RAGDemo:
-    """Interactive console demo."""
-    
+class RAGDemo:    
     def __init__(self):
         print("="*80)
         print("ECE 350 RAG ASSISTANT")
@@ -17,7 +15,7 @@ class RAGDemo:
         print("\nInitializing...")
         
         self.rag = ECE350RAG(
-            chunks_file="chunks.json",
+            chunks_file="lecture_chunks.json",
             embedding_model="text-embedding-3-small",
             llm_model="gpt-4o-mini"
         )

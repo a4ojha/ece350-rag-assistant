@@ -1,7 +1,3 @@
-"""
-RAG pipeline that returns structured, frontend-ready responses.
-"""
-
 import json
 from dotenv import load_dotenv
 import numpy as np
@@ -15,12 +11,11 @@ from data_models import Chunk, RetrievalResult
 class ECE350RAG:
     """
     RAG system with full traceability and structured responses.
-    Ready for future API integration.
     """
     
     def __init__(
         self,
-        chunks_file: str = "chunks.json",
+        chunks_file: str = "lecture_chunks.json",
         embedding_model: str = "text-embedding-3-small",
         llm_model: str = "gpt-4o-mini"
     ):
@@ -122,7 +117,7 @@ class ECE350RAG:
         min_score: float = 0.3
     ) -> Tuple[List[Chunk], Dict]:
         """
-        Retrieve relevant chunks with statistics.
+        Retrieve relevant chunks
         
         Returns:
             (chunks, stats_dict)
@@ -160,7 +155,7 @@ class ECE350RAG:
         return retrieved, stats
     
     def format_context_for_llm(self, chunks: List[Chunk]) -> str:
-        """Format chunks into LLM context."""
+        """Format chunks into LLM context"""
         if not chunks:
             return "No relevant lecture content found."
         
@@ -188,7 +183,7 @@ class ECE350RAG:
         temperature: float = 0.0
     ) -> Tuple[str, str, int]:
         """
-        Generate grounded answer.
+        Generate grounded answer
         
         Returns:
             (answer, confidence, generation_time_ms)
@@ -292,13 +287,12 @@ Instructions:
     
     def export_result_for_frontend(self, result: RetrievalResult) -> Dict:
         """
-        Export result in frontend-ready format.
-        This is what your Next.js API will return.
+        Export result in frontend-ready format
         """
         return result.to_dict()
     
     def get_chunk_by_id(self, chunk_id: str) -> Optional[Chunk]:
-        """Retrieve specific chunk by ID (useful for "show full context" feature)."""
+        """Retrieve specific chunk by ID (useful for "show full context" feature)"""
         for chunk in self.chunks:
             if chunk.chunk_id == chunk_id:
                 return chunk
@@ -306,7 +300,7 @@ Instructions:
     
     def get_surrounding_chunks(self, chunk_id: str, context_size: int = 2) -> List[Chunk]:
         """
-        Get surrounding chunks from same lecture (for expanded context view).
+        Get surrounding chunks from same lecture (for expanded context view)
         
         Args:
             chunk_id: Central chunk
@@ -338,7 +332,7 @@ Instructions:
 if __name__ == "__main__":
     # Initialize
     rag = ECE350RAG(
-        chunks_file="chunks.json",
+        chunks_file="lecture_chunks.json",
         embedding_model="text-embedding-3-small",
         llm_model="gpt-4o-mini"
     )

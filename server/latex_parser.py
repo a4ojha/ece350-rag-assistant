@@ -1,6 +1,7 @@
 """
 LaTeX parser with full source traceability.
 Tracks character offsets, line numbers, and hierarchical structure.
+Pulled from https://github.com/jzarnett/ece350/tree/main/lectures
 """
 
 import re
@@ -96,7 +97,7 @@ class LaTeXParser:
         return keywords
     
     def detect_features(self, raw_text: str) -> ContentFeatures:
-        """Detect content features in LaTeX source."""
+        """Detect content features in LaTeX source"""
         has_code = bool(re.search(r'\\begin\{(verbatim|lstlisting|minted)\}', raw_text))
         has_math = bool(re.search(r'(\$[^$]+\$|\\\[[^\]]+\\\]|\\begin\{(equation|align)\})', raw_text))
         has_lists = bool(re.search(r'\\begin\{(enumerate|itemize)\}', raw_text))
@@ -379,7 +380,7 @@ class LaTeXParser:
         print(f"\n✓ Total chunks: {len(all_chunks)}")
         return all_chunks
     
-    def save_chunks(self, chunks: List[Chunk], output_file: str = "chunks.json"):
+    def save_chunks(self, chunks: List[Chunk], output_file: str = "lecture_chunks.json"):
         """Save chunks to JSON."""
         import json
         

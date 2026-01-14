@@ -160,7 +160,6 @@ class Chunk:
             
             # Content
             "text_preview": self.text[:200] + "..." if len(self.text) > 200 else self.text,
-            "text_full": self.text,
             "word_count": self.word_count,
             
             # Features (for UI hints)

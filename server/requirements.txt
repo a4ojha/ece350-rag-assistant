@@ -1,0 +1,8 @@
+openai
+faiss-cpu
+numpy
+python-dotenv
+
+# API dependencies
+flask
+flask-cors
