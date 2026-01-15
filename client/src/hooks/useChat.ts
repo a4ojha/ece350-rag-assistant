@@ -2,6 +2,9 @@ import { useState, useCallback, useRef } from "react";
 import type { ChatMessage, Source } from "@/lib/types";
 import { apiClient } from "@/lib/api";
 
+// set to false for production
+const TEST_MODE = false; // When true, shows skeleton without API call
+
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
@@ -28,6 +31,11 @@ export function useChat() {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+
+    // Test mode: just show skeleton, no API call
+    if (TEST_MODE) {
+      return;
+    }
 
     try {
       const response = await apiClient.query({ question: question.trim() });

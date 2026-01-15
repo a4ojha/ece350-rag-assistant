@@ -58,7 +58,7 @@ export default function Home() {
   return (
     <div className="flex flex-col h-screen bg-background bg-gradient-mesh">
       {/* Header */}
-      <header className="sticky top-0 z-10 shrink-0 border-b border-border/50 bg-background/60 backdrop-blur-xl">
+      <header className="sticky top-0 z-10 shrink-0 border-b border-border/50 bg-background/60 backdrop-blur-xl select-none">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary/70 to-accent/70 text-primary-foreground glow-sm">
@@ -79,7 +79,7 @@ export default function Home() {
                   variant="outline"
                   size="sm"
                   onClick={handleViewAllSources}
-                  className="h-8 text-xs gap-1.5 hover:text-foreground/50"
+                  className="h-8 text-xs gap-1.5 hover:text-foreground/50 cursor-pointer"
                 >
                   <FileStack className="h-3.5 w-3.5" />
                   Sources ({latestAssistantMessage.sources.length})
@@ -91,7 +91,7 @@ export default function Home() {
                 variant="ghost"
                 size="sm"
                 onClick={clearChat}
-                className="h-8 text-xs text-muted-foreground hover:text-foreground"
+                className="h-8 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
               >
                 Clear chat
               </Button>

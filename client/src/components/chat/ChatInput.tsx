@@ -43,7 +43,7 @@ export function ChatInput({
   }, [onCancel]);
 
   return (
-    <div className="relative flex items-end gap-3 p-4 border-t border-border/30 bg-background/60 backdrop-blur-xl">
+    <div className="relative flex items-end gap-3 p-4 border-t border-border/30 bg-background/60 backdrop-blur-xl rounded-xl">
       <textarea
         value={input}
         onChange={(e) => setInput(e.target.value)}
@@ -63,7 +63,7 @@ export function ChatInput({
           variant="outline"
           size="icon"
           onClick={handleCancel}
-          className="h-12 w-12 rounded-xl shrink-0 border-border/50 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50 transition-all duration-200"
+          className="h-12 w-12 rounded-xl shrink-0 border-border/50 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50 transition-all duration-200 cursor-pointer"
         >
           <Square className="h-4 w-4" />
           <span className="sr-only">Cancel</span>
@@ -73,7 +73,7 @@ export function ChatInput({
           onClick={handleSubmit}
           disabled={!input.trim() || disabled}
           size="icon"
-          className="h-12 w-12 rounded-xl shrink-0 bg-gradient-to-br from-primary to-accent hover:opacity-90 disabled:opacity-30 disabled:from-muted disabled:to-muted transition-all duration-200 glow-sm"
+          className="h-12 w-12 rounded-xl shrink-0 bg-gradient-to-br from-primary to-accent/60 hover:opacity-90 disabled:opacity-30 disabled:from-muted disabled:to-muted transition-all duration-200 glow-sm"
         >
           <Send className="h-4 w-4" />
           <span className="sr-only">Send</span>
