@@ -81,7 +81,7 @@ function EmptyState({ onExampleClick }: EmptyStateProps) {
         ECE 350 Assistant
       </h2>
       <p className="text-xl font-display text-muted-foreground max-w-md leading-relaxed mb-4 animate-float-up" style={{ animationDelay: "100ms" }}>
-        Ask any questions about course content.
+        Ask anything about course content.
       </p>
       <p className="text-muted-foreground/80 max-w-md leading-relaxed text-sm animate-float-up" style={{ animationDelay: "150ms" }}>
         Responses are strictly based off of Prof. Zarnett's{" "}

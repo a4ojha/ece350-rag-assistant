@@ -4,6 +4,9 @@ A truly hallucination-free RAG chatbot knowledgable on University of Waterloo's 
 
 Provides grounded answers with full source traceability and in-app PDF citations.
 
+![alt text](landing.png)
+![alt text](response.png)
+
 ## Demo
 **Try it live**: [ece350-assistant.vercel.app](https://ece350-assistant.vercel.app)
 
