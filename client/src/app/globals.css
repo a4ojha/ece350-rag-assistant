@@ -133,6 +133,13 @@
   }
 }
 
+/* Firefox renders SVG filters brighter - reduce grain opacity */
+@-moz-document url-prefix() {
+  body {
+    background-image: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.7)), url('../../public/noise.svg');
+  }
+}
+
 /* Gradient utilities */
 .gradient-text {
   background: linear-gradient(135deg, oklch(0.6 0.1 125), oklch(0.65 0.08 140));
