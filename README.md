@@ -6,7 +6,7 @@ Provides grounded answers backed by exact lecture sources.
 
 ![alt text](landing.png)
 ![alt text](response.png)
-_Example RAG response - displays relevant sections from lecture notes_
+_Example RAG response - displays relevant sections from lecture notes with relevancy scores_
 
 ## Demo
 **Try it live**: [ece350-assistant.vercel.app](https://ece350-assistant.vercel.app)
