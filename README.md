@@ -2,10 +2,11 @@
 
 A truly hallucination-free RAG chatbot knowledgable on University of Waterloo's Real-Time Operating Systems course (ECE 350). 
 
-Provides grounded answers with full source traceability and in-app PDF citations.
+Provides grounded answers backed by exact lecture sources.
 
 ![alt text](landing.png)
 ![alt text](response.png)
+_Example RAG response - displays relevant sections from lecture notes_
 
 ## Demo
 **Try it live**: [ece350-assistant.vercel.app](https://ece350-assistant.vercel.app)
@@ -15,7 +16,6 @@ Unfortunately this is a student project running on personal API credits.
 
 For unlimited usage:
 - Run locally with your own OpenAI key (see [Installation](#installation))
-- Check out the [demo video](#) for a full walkthrough
 
 I appreciate your understanding! 🙏
 
@@ -88,12 +88,10 @@ Open http://localhost:3000 in your browser to use the chat interface.
 
 ## Cost Notes
 
-Per 100 queries (with 5 chunks retrieved each):
+Cost info for local usage. Per 100 queries (with 5 chunks retrieved each):
 - Embeddings: $0.002
 - LLM calls: $0.035
 - **Total**: ~$0.04/100 queries
-
-The live demo uses rate limiting to manage costs on a student budget.
 
 ## Acknowledgments
 
