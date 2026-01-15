@@ -6,3 +6,4 @@ python-dotenv
 # API dependencies
 flask
 flask-cors
+flask-limiter

@@ -61,11 +61,16 @@ export function useChat() {
         err instanceof Error ? err.message : "An unexpected error occurred";
       setError(errorMessage);
 
+      // Check if this is a rate limit error
+      const isRateLimit = (err as any)?.isRateLimit === true;
+
       // Add error message to chat
       const errorChatMessage: ChatMessage = {
         id: generateId(),
         role: "assistant",
-        content: `Sorry, I encountered an error: ${errorMessage}`,
+        content: isRateLimit
+          ? `⚠️ **Daily limit reached.** This demo is limited to 5 queries/day to manage API costs. \n\nYou can [clone the repo](https://github.com/a4ojha/ece350-rag-assistant) and run locally with your own OpenAI API key for unlimited use.`
+          : `Sorry, I encountered an error: ${errorMessage}`,
         timestamp: new Date(),
       };
 

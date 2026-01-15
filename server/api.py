@@ -4,8 +4,12 @@ Wraps the existing RAG pipeline for frontend consumption.
 """
 
 import os
+from dotenv import load_dotenv
+
 from flask import Flask, request, jsonify, send_file, abort
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from functools import wraps
 import time
 from pathlib import Path
@@ -22,6 +26,35 @@ CORS(app, resources={
         "allow_headers": ["Content-Type"]
     }
 })
+
+# =============================================================================
+# Rate Limiting Configuration
+# =============================================================================
+# Only enabled in production (to set RATE_LIMIT_ENABLED=true in deployment environment)
+# Local development has unlimited queries by default
+
+load_dotenv()
+RATE_LIMIT_ENABLED = os.getenv("RATE_LIMIT_ENABLED", "false").lower() == "true"
+DAILY_QUERY_LIMIT = int(os.getenv("DAILY_QUERY_LIMIT", "5"))
+
+# Initialize limiter (uses in-memory storage by default)
+limiter = Limiter(
+    key_func=get_remote_address,
+    app=app,
+    enabled=RATE_LIMIT_ENABLED,
+    default_limits=[],  # No default limits - we apply them selectively
+    storage_uri="memory://",
+)
+
+@app.errorhandler(429)
+def rate_limit_exceeded(e):
+    """Custom handler for rate limit errors."""
+    return jsonify({
+        "error": "Rate limit exceeded",
+        "message": f"Daily query limit ({DAILY_QUERY_LIMIT}) reached. This demo is limited to manage API costs. Try again tomorrow, or clone the repo to run locally with your own API key.",
+        "limit": DAILY_QUERY_LIMIT,
+        "reset": "midnight UTC"
+    }), 429
 
 # Global RAG instance (initialized on startup)
 rag: ECE350RAG = None
@@ -82,6 +115,7 @@ def system_info():
 # =============================================================================
 
 @app.route("/api/query", methods=["POST"])
+@limiter.limit(f"{DAILY_QUERY_LIMIT}/day")
 @require_rag
 def query():
     """
@@ -424,6 +458,10 @@ def initialize_rag():
     print("RAG API Ready!")
     print(f"  - {len(rag.chunks)} chunks loaded")
     print(f"  - FAISS index: {rag.index.ntotal} vectors")
+    if RATE_LIMIT_ENABLED:
+        print(f"  - Rate limiting: {DAILY_QUERY_LIMIT} queries/day per IP")
+    else:
+        print("  - Rate limiting: DISABLED (local development)")
     print("=" * 60 + "\n")
 
     return True

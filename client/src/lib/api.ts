@@ -42,6 +42,15 @@ class APIClient {
         error: "Unknown error",
         message: response.statusText,
       }));
+
+      // Special handling for rate limit errors
+      if (response.status === 429) {
+        const rateLimitError = new Error(error.message || "Rate limit exceeded");
+        (rateLimitError as any).isRateLimit = true;
+        (rateLimitError as any).limit = error.limit;
+        throw rateLimitError;
+      }
+
       throw new Error(error.message || error.error || "Query failed");
     }
 
