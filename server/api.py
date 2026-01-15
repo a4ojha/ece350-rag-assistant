@@ -17,6 +17,8 @@ from pathlib import Path
 from rag_pipeline import ECE350RAG
 from data_models import Chunk
 
+load_dotenv()
+
 # Initialize Flask app
 app = Flask(__name__)
 CORS(app, resources={
@@ -32,8 +34,6 @@ CORS(app, resources={
 # =============================================================================
 # Only enabled in production (to set RATE_LIMIT_ENABLED=true in deployment environment)
 # Local development has unlimited queries by default
-
-load_dotenv()
 RATE_LIMIT_ENABLED = os.getenv("RATE_LIMIT_ENABLED", "false").lower() == "true"
 DAILY_QUERY_LIMIT = int(os.getenv("DAILY_QUERY_LIMIT", "5"))
 
