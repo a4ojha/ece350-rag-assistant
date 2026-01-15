@@ -32,7 +32,7 @@ export const SourceCard = memo(function SourceCard({
 }: SourceCardProps) {
   const [isExpanded, setIsExpanded] = useState(initialExpanded);
 
-  const lectureNum = source.lecture.num.toString().padStart(2, "0");
+  const lectureNum = source.lecture.num.toString();
   const scorePercent = Math.round(source.relevance_score * 100);
 
   return (
@@ -42,10 +42,19 @@ export const SourceCard = memo(function SourceCard({
           <div className="flex-1 min-w-0">
             {/* Lecture badge and score */}
             <div className="flex items-center gap-2 mb-2">
-              <Badge variant="outline" className="font-mono text-xs border-primary/30 text-primary">
+              <Badge variant="outline" className="text-xs border-primary/30 text-primary">
                 L{lectureNum}
               </Badge>
-              <span className="text-xs text-muted-foreground">
+              <span
+                className={cn(
+                  "text-xs font-display",
+                  scorePercent > 55
+                    ? "text-green-600 dark:text-green-400"
+                    : scorePercent > 35
+                      ? "text-amber-600 dark:text-amber-400"
+                      : "text-red-600 dark:text-red-400"
+                )}
+              >
                 {scorePercent}% match
               </span>
             </div>
@@ -54,8 +63,18 @@ export const SourceCard = memo(function SourceCard({
             <h4 className="font-medium text-sm text-foreground truncate">
               {source.lecture.title}
             </h4>
-            <p className="text-xs text-muted-foreground mt-0.5 truncate">
-              {source.location.breadcrumb}
+            <p className="text-xs text-muted-foreground mt-0.5 wrap">
+              {(() => {
+                const parts = source.location.breadcrumb.split(" > ");
+                if (parts.length <= 1) return source.location.breadcrumb;
+                const leading = parts.slice(0, -1).join(" > ");
+                const last = parts[parts.length - 1];
+                return (
+                  <>
+                    {leading} &gt; <span className="text-foreground font-medium">{last}</span>
+                  </>
+                );
+              })()}
             </p>
           </div>
 
@@ -106,7 +125,7 @@ export const SourceCard = memo(function SourceCard({
         {/* Expand/collapse button */}
         {source.text_full.length > source.text_preview.length && (
           <Button
-            variant="ghost"
+            variant="secondary"
             size="sm"
             onClick={() => setIsExpanded(!isExpanded)}
             className="mt-2 h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
@@ -134,7 +153,7 @@ export const SourceCard = memo(function SourceCard({
               variant="outline"
               size="sm"
               onClick={() => onViewPdf(source)}
-              className="h-8 text-xs border-primary/30 hover:bg-primary/10 hover:border-primary/50"
+              className="h-8 text-xs border-primary/30 hover:bg-transparent hover:text-current hover:opacity-80"
             >
               <FileText className="h-3 w-3 mr-1.5 text-primary" />
               View PDF

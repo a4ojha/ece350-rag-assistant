@@ -128,6 +128,9 @@
     background-image: url('../../public/noise.svg');
     font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   }
+  button {
+    cursor: pointer;
+  }
 }
 
 /* Gradient utilities */
@@ -206,6 +209,16 @@ html {
   background: oklch(0.35 0.04 265);
 }
 
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* Focus visible styles */
 :focus-visible {
   outline: 2px solid var(--ring);
@@ -226,6 +239,90 @@ html {
 .react-pdf__Page__canvas {
   margin: 0 auto;
   border-radius: var(--radius);
+}
+
+/* PDF text layer- enable text selection */
+.react-pdf__Page__textContent {
+  user-select: text !important;
+  cursor: text;
+}
+
+.react-pdf__Page__textContent span {
+  user-select: text !important;
+}
+
+/* Text selection highlight in PDF */
+.react-pdf__Page__textContent ::selection {
+  background-color: var(--accent);
+  color: black;
+}
+
+.react-pdf__Page__textContent ::-moz-selection {
+  background-color: var(--accent);
+  color: black;
+}
+
+/* PDF panel slide animation */
+.pdf-panel {
+  will-change: transform, opacity;
+}
+
+/* Main content shift when PDF panel is open */
+.main-content {
+  transition: margin-left 300ms ease-out, width 300ms ease-out;
+  will-change: margin-left, width;
+}
+
+.main-content.pdf-open {
+  margin-left: min(55vw, 800px);
+}
+
+/* Sources panel slide animation */
+.sources-panel {
+  will-change: transform, opacity;
+  pointer-events: auto;
+}
+
+/* Prevent interaction with hidden panels */
+.pdf-panel:not(.translate-x-0),
+.sources-panel:not(.translate-x-0) {
+  pointer-events: none;
+}
+
+/* Connected panel styling - subtle visual connector */
+.panel-connector {
+  position: relative;
+}
+
+.panel-connector::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: -1px;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    var(--border) 10%,
+    var(--border) 90%,
+    transparent
+  );
+}
+
+/* Ensure panels stack correctly */
+.pdf-panel {
+  z-index: 40;
+}
+
+.sources-panel {
+  z-index: 50;
+}
+
+/* Flexible width PDF panel (sources-panel flow) */
+.pdf-panel-flexible {
+  /* Remove right border when connected to sources panel */
+  border-right: none;
 }
 
 /* Animate skeleton */

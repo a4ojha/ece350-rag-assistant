@@ -34,7 +34,7 @@ export const ChatContainer = memo(function ChatContainer({
 
   return (
     <div className="flex-1 min-h-0 overflow-hidden animate-fade-in" ref={scrollRef}>
-      <ScrollArea className="h-full">
+      <ScrollArea className="h-full scrollbar-hide">
         <div className="divide-y divide-border/30">
           {messages.map((message, index) => (
             <div

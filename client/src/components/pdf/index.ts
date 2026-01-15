@@ -1,1 +1,1 @@
-export { PDFViewerModal } from "./PDFViewerModal";
+export { PDFViewerPanel } from "./PDFViewerPanel";

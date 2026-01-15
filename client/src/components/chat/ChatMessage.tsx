@@ -7,6 +7,19 @@ import { cn } from "@/lib/utils";
 import type { ChatMessage as ChatMessageType, Source } from "@/lib/types";
 import { SourceBadge } from "./SourceBadge";
 
+// Deduplicate sources by breadcrumb, keeping the highest relevance score
+function deduplicateSources(sources: Source[]): Source[] {
+  const seen = new Map<string, Source>();
+  for (const source of sources) {
+    const key = source.location.breadcrumb;
+    const existing = seen.get(key);
+    if (!existing || source.relevance_score > existing.relevance_score) {
+      seen.set(key, source);
+    }
+  }
+  return Array.from(seen.values());
+}
+
 interface ChatMessageProps {
   message: ChatMessageType;
   onSourceClick?: (source: Source) => void;
@@ -101,7 +114,7 @@ export const ChatMessage = memo(function ChatMessage({
         {/* Sources */}
         {!isUser && message.sources && message.sources.length > 0 && (
           <div className="flex flex-wrap gap-2 pt-2">
-            {message.sources.map((source) => (
+            {deduplicateSources(message.sources).map((source) => (
               <SourceBadge
                 key={source.chunk_id}
                 source={source}

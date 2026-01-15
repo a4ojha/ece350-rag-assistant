@@ -98,24 +98,41 @@ export function useChat() {
   };
 }
 
-// Hook for managing selected source for PDF viewing
+// Origin of PDF open action - determines layout behavior
+export type PdfOrigin = "chat" | "sources-panel";
+
+// Hook for managing selected source for PDF viewing with panel layout
 export function useSourceSelection() {
   const [selectedSource, setSelectedSource] = useState<Source | null>(null);
   const [isPdfOpen, setIsPdfOpen] = useState(false);
+  const [pdfOrigin, setPdfOrigin] = useState<PdfOrigin>("chat");
 
-  const openPdf = useCallback((source: Source) => {
+  const openPdf = useCallback((source: Source, origin: PdfOrigin = "chat") => {
     setSelectedSource(source);
+    setPdfOrigin(origin);
     setIsPdfOpen(true);
   }, []);
 
   const closePdf = useCallback(() => {
     setIsPdfOpen(false);
+    // Keep selectedSource briefly for exit animation, then clear
+    setTimeout(() => {
+      setSelectedSource(null);
+      setPdfOrigin("chat");
+    }, 300);
+  }, []);
+
+  // Swap PDF content without closing panel (for multiple PDFs)
+  const swapPdf = useCallback((source: Source) => {
+    setSelectedSource(source);
   }, []);
 
   return {
     selectedSource,
     isPdfOpen,
+    pdfOrigin,
     openPdf,
     closePdf,
+    swapPdf,
   };
 }
